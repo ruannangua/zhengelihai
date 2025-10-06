@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>爱自有天意</title>
+    <style>
+        :root { --fg: #e9e9ef; --bg1:#101114; --bg2:#0a0b0d; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            color: var(--fg);
+            background: radial-gradient(1200px 800px at 50% 35%, var(--bg1), var(--bg2));
+            display: grid;
+            place-items: center; /* 横纵居中 */
+            font-family: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans CJK SC", Arial, sans-serif;
+        }
+        .card {
+            position: relative;
+            padding: 28px 36px;
+            border-radius: 24px;
+            /* 用双层背景实现渐变描边，避免 -webkit-mask 的兼容/校验告警 */
+            border: 2px solid transparent;
+            background:
+                    linear-gradient(rgba(255,255,255,0.03), rgba(255,255,255,0.03)) padding-box,
+                    linear-gradient(135deg, #6ee7ff, #9b8cff, #ffd6e7) border-box;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06);
+            backdrop-filter: blur(6px);
+        }
+        /* 细彩边由双层背景完成，不再使用 ::before 与 -webkit-mask */
+        h1 {
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: .15em;
+            text-align: center;
+            font-size: clamp(28px, 6vw, 64px);
+        }
+        footer{
+            position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+            font-size: 12px; opacity: .45; user-select: none;
+        }
+        #bg{position:fixed;inset:0;z-index:-1;pointer-events:none;}
+    </style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="card">
+    <h1>爱自有天意</h1>
+</div>
+<footer>Made with ♥</footer>
+<script>
+    (()=>{
+        const canvas = document.getElementById('bg');
+        const ctx = canvas.getContext('2d');
+        const DPR = Math.min(window.devicePixelRatio || 1, 2);
+        let w=0,h=0,particles=[];
+
+        const colors = ['#6ee7ff','#9b8cff','#ffd6e7'];
+        function resize(){
+            w = canvas.width = Math.floor(innerWidth * DPR);
+            h = canvas.height = Math.floor(innerHeight * DPR);
+            canvas.style.width = innerWidth+'px';
+            canvas.style.height = innerHeight+'px';
+            makeParticles();
+        }
+
+        function makeParticles(){
+            const base = Math.round((innerWidth*innerHeight)/18000); // 自适应数量
+            const count = Math.max(40, Math.min(140, base));
+            particles = new Array(count).fill(0).map(()=>({
+                x: Math.random()*w,
+                y: Math.random()*h,
+                r: (Math.random()*1.6+0.6)*DPR,
+                vx: (Math.random()-0.5)*0.18*DPR,
+                vy: (Math.random()-0.5)*0.18*DPR,
+                c: colors[Math.floor(Math.random()*colors.length)],
+                a: Math.random()*0.45+0.25,
+            }));
+        }
+
+        let mx=w/2,my=h/2; let hasMouse=false;
+        window.addEventListener('mousemove',e=>{ hasMouse=true; mx=e.clientX*DPR; my=e.clientY*DPR; });
+
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+        function draw(){
+            if(reduced.matches) { ctx.clearRect(0,0,w,h); return; }
+            ctx.clearRect(0,0,w,h);
+            for(const p of particles){
+                // 轻微受鼠标影响的飘动
+                if(hasMouse){ p.vx += (mx - p.x)*1e-6; p.vy += (my - p.y)*1e-6; }
+                p.x += p.vx; p.y += p.vy;
+                if(p.x<0||p.x>w) p.vx*=-1, p.x=Math.max(0, Math.min(w, p.x));
+                if(p.y<0||p.y>h) p.vy*=-1, p.y=Math.max(0, Math.min(h, p.y));
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.fillStyle = p.c+Math.floor(p.a*255).toString(16).padStart(2,'0'); // 非法，修复为全局Alpha
+                ctx.globalAlpha = p.a; ctx.fillStyle=p.c; ctx.fill(); ctx.globalAlpha = 1;
+            }
+            // 连接临近粒子
+            for(let i=0;i<particles.length;i++){
+                for(let j=i+1;j<particles.length;j++){
+                    const a=particles[i], b=particles[j];
+                    const dx=a.x-b.x, dy=a.y-b.y; const d2=dx*dx+dy*dy;
+                    if(d2 < (110*DPR)*(110*DPR)){
+                        ctx.strokeStyle = 'rgba(226,226,255,0.08)';
+                        ctx.lineWidth = 1*DPR; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(draw);
+        }
+
+        addEventListener('resize', resize, {passive:true});
+        resize();
+        requestAnimationFrame(draw);
+    })();
+</script>
+</body>
+</html>
